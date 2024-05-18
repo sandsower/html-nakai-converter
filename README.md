@@ -1,7 +1,8 @@
-# lustreizer
+# This is a port of the lustreizer library for nakai
+# nakaier
 
-[![Package Version](https://img.shields.io/hexpm/v/lustreizer)](https://hex.pm/packages/lustreizer)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/lustreizer/)
+[![Package Version](https://img.shields.io/hexpm/v/nakaier)](https://hex.pm/packages/nakaier)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/nakaier/)
 
 ```sh
 gleam add lustreizer
@@ -14,7 +15,7 @@ pub fn main() {
 }
 ```
 
-Further documentation can be found at <https://hexdocs.pm/lustreizer>.
+Further documentation can be found at <https://hexdocs.pm/nakaier>.
 
 ## Development
 
