@@ -92,7 +92,6 @@ fn print_element(
     | "bdi"
     | "bdo"
     | "blockquote"
-    | "body"
     | "button"
     | "canvas"
     | "caption"
@@ -121,10 +120,8 @@ fn print_element(
     | "h4"
     | "h5"
     | "h6"
-    | "head"
     | "header"
     | "hgroup"
-    | "html"
     | "i"
     | "iframe"
     | "ins"
@@ -155,7 +152,6 @@ fn print_element(
     | "ruby"
     | "s"
     | "samp"
-    | "script"
     | "search"
     | "section"
     | "select"
@@ -185,6 +181,13 @@ fn print_element(
     | "video" -> {
       let children = wrap(print_children(children, ws), "[", "]")
       doc.from_string("html." <> tag)
+      |> doc.append(wrap([attributes, children], "(", ")"))
+    }
+
+    "head" | "body" | "html" -> {
+      // | "script" Skip script tags as they are experimental 
+      let children = wrap(print_children(children, ws), "[", "]")
+      doc.from_string("html." <> tag |> capitalize)
       |> doc.append(wrap([attributes, children], "(", ")"))
     }
 
@@ -228,15 +231,17 @@ fn print_children(
     case node {
       Element(a, b, c) -> Ok(print_element(a, b, c, ws))
       Comment(_) -> Error(Nil)
-      Text(t) if ws == StripWhitespace -> {
-        case string.trim_left(t) {
-          "" -> Error(Nil)
-          t -> Ok(print_text(t))
-        }
-      }
+      Text(t) if ws == StripWhitespace -> strip_whitespace(t)
       Text(t) -> Ok(print_text(t))
     }
   })
+}
+
+fn strip_whitespace(t: String) {
+  case string.trim_left(t) {
+    "" -> Error(Nil)
+    t -> Ok(print_text(t))
+  }
 }
 
 fn print_attribute(attribute: #(String, String)) -> Document {
@@ -303,7 +308,6 @@ fn print_attribute(attribute: #(String, String)) -> Document {
     }
 
     // Kebab case attributes
-
     "accept-charset"
     | "aria-checked"
     | "aria-current"
@@ -329,12 +333,10 @@ fn print_attribute(attribute: #(String, String)) -> Document {
     }
 
     // Type is a reserved word so we need to use attr.type_ instead
-
     "type" -> doc.from_string("attr.type_(" <> print_string(attribute.1) <> ")")
 
     // Data attribute takes 2 elements, we need a special case for it
     // "data" -> todo
-
     // Escape hatch for unknown attributes i.e. htmx or similar
     _ -> {
       let children = [
@@ -359,4 +361,13 @@ fn wrap(items: List(Document), open: String, close: String) -> Document {
   |> doc.nest(by: 2)
   |> doc.append(close)
   |> doc.group
+}
+
+fn capitalize(s: String) -> String {
+  case s {
+    "" -> ""
+    v ->
+      string.uppercase(v |> string.slice(0, 1))
+      <> v |> string.slice(1, string.length(s))
+  }
 }

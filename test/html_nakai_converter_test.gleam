@@ -56,7 +56,7 @@ pub fn element_nakai_does_not_have_a_helper_for_test() {
   "<marquee>I will die mad that this element was removed</marquee>"
   |> html_nakai_converter.convert
   |> should.equal(
-    "html.Element(\"marquee\", [], [html.Text(\"I will die mad that this element was removed\")])",
+    "html.Element(\n  \"marquee\",\n  [],\n  [html.Text(\"I will die mad that this element was removed\")],\n)",
   )
 }
 
@@ -79,7 +79,7 @@ pub fn other_attribute_test() {
 pub fn no_value_attribute_test() {
   "<p type=good></p>"
   |> html_nakai_converter.convert
-  |> should.equal("html.p([attribute.type_(\"good\")], [])")
+  |> should.equal("html.p([attr.type_(\"good\")], [])")
 }
 
 pub fn void_br_test() {
@@ -98,7 +98,7 @@ pub fn its_already_a_page_test() {
   "<html><head><title>Hi</title></head><body>Yo</body></html>"
   |> html_nakai_converter.convert
   |> should.equal(
-    "html.Html(\n  [],\n  [html.Head([], [html.title([], [html.Text(\"Hi\")])]), html.body([], [html.Text(\"Yo\")])],\n)",
+    "html.Html(\n  [],\n  [\n    html.Head([], [html.title([], [html.Text(\"Hi\")])]),\n    html.Body([], [html.Text(\"Yo\")]),\n  ],\n)",
   )
 }
 
@@ -117,9 +117,9 @@ pub fn text_with_a_quote_in_it_test() {
 }
 
 pub fn non_string_attribute_test() {
-  "<br autoplay>"
+  "<br random>"
   |> html_nakai_converter.convert
-  |> should.equal("html.br([attr.Attr(\"autoplay\", \"\")])")
+  |> should.equal("html.br([attr.Attr(\"random\", \"\")])")
 }
 
 pub fn bool_attribute_test() {
@@ -195,7 +195,7 @@ pub fn pre_whitespace_test() {
   |> should.equal(
     "html.pre(
   [],
-  [html.Text(\"    \"), html.code([], [html.Text(\"\n      Hello!\n    \")]), html.Text(\"\n  \")],
+  [\n    html.Text(\"    \"),\n    html.code([], [html.Text(\"\n      Hello!\n    \")]),\n    html.Text(\"\n  \"),\n  ],
 )",
   )
 }
