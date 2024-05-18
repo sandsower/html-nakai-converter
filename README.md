@@ -5,10 +5,10 @@
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/nakaier/)
 
 ```sh
-gleam add lustreizer
+gleam add nakaier
 ```
 ```gleam
-import lustreizer
+import nakaier
 
 pub fn main() {
   // TODO: An example of the project in use

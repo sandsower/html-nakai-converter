@@ -9,9 +9,8 @@ import javascript_dom_parser.{type HtmlNode, Comment, Element, Text} as parser
 /// The resulting code is expected to be in a module with these imports:
 ///
 /// ```gleam
-/// import lustre/element/html
-/// import lustre/attribute.{attribute}
-/// import lustre/element.{element, text}
+/// import nakai/html
+/// import nakai/attr.{Attr}
 /// ```
 ///
 pub fn convert(html: String) -> String {
@@ -36,16 +35,16 @@ type WhitespaceMode {
 
 fn strip_body_wrapper(html: HtmlNode, source: String) -> List(HtmlNode) {
   let full_page = string.contains(source, "<head>")
-  case html {
-    Element("HTML", [], [Element("HEAD", [], []), Element("BODY", [], nodes)])
-      if !full_page
+  case html, full_page {
+    Element("HTML", [], [Element("HEAD", [], []), Element("BODY", [], nodes)]),
+      False
     -> nodes
-    _ -> [html]
+    _, _ -> [html]
   }
 }
 
 fn print_text(t: String) -> Document {
-  doc.from_string("text(" <> print_string(t) <> ")")
+  doc.from_string("html.Text(" <> print_string(t) <> ")")
 }
 
 fn print_string(t: String) -> String {
@@ -205,7 +204,7 @@ fn print_element(
     _ -> {
       let children = wrap(print_children(children, ws), "[", "]")
       let tag = doc.from_string(print_string(tag))
-      doc.from_string("element")
+      doc.from_string("html.Element")
       |> doc.append(wrap([tag, attributes, children], "(", ")"))
     }
   }
@@ -242,67 +241,107 @@ fn print_children(
 
 fn print_attribute(attribute: #(String, String)) -> Document {
   case attribute.0 {
-    "action"
+    "accept"
+    | "action"
     | "alt"
-    | "attribute"
+    | "autocapitalize"
     | "autocomplete"
+    | "capture"
+    | "charset"
+    | "cite"
     | "class"
-    | "download"
+    | "content"
     | "enctype"
     | "for"
-    | "form_action"
-    | "form_enctype"
-    | "form_method"
-    | "form_target"
+    | "formaction"
+    | "height"
     | "href"
     | "id"
-    | "map"
-    | "max"
+    | "integrity"
+    | "lang"
+    | "maxlength"
     | "method"
-    | "min"
-    | "msg"
+    | "minlength"
     | "name"
-    | "none"
-    | "on"
-    | "pattern"
     | "placeholder"
+    | "property"
     | "rel"
     | "role"
     | "src"
-    | "step"
+    | "style"
+    | "tabindex"
     | "target"
+    | "title"
     | "value"
-    | "wrap" -> {
+    | "width" -> {
       doc.from_string(
-        "attribute." <> attribute.0 <> "(" <> print_string(attribute.1) <> ")",
+        "attr." <> attribute.0 <> "(" <> print_string(attribute.1) <> ")",
       )
     }
 
-    "type" ->
-      doc.from_string("attribute.type_(" <> print_string(attribute.1) <> ")")
-
-    "checked"
+    "async"
+    | "autofocus"
+    | "autoplay"
+    | "checked"
+    | "contenteditable"
+    | "crossorigin"
     | "controls"
+    | "defer"
     | "disabled"
-    | "form_novalidate"
+    | "draggable"
+    | "hidden"
     | "loop"
+    | "multiple"
+    | "muted"
     | "novalidate"
+    | "open"
+    | "preload"
     | "readonly"
     | "required"
     | "selected" -> {
-      doc.from_string("attribute." <> attribute.0 <> "(True)")
+      doc.from_string("attr." <> attribute.0 <> "()")
     }
 
-    "width" | "height" | "cols" | "rows" -> {
-      doc.from_string("attribute." <> attribute.0 <> "(" <> attribute.1 <> ")")
+    // Kebab case attributes
+
+    "accept-charset"
+    | "aria-checked"
+    | "aria-current"
+    | "aria-label"
+    | "aria-labelledby"
+    | "aria-placeholder"
+    | "aria-readonly"
+    | "aria-required"
+    | "http-equiv" -> {
+      doc.from_string(
+        "attr."
+        <> attribute.0 |> string.replace("-", "_")
+        <> "("
+        <> print_string(attribute.1)
+        <> ")",
+      )
     }
 
+    "aria-disabled" | "aria-hidden" | "aria-invalid" -> {
+      doc.from_string(
+        "attr." <> attribute.0 |> string.replace("-", "_") <> "()",
+      )
+    }
+
+    // Type is a reserved word so we need to use attr.type_ instead
+
+    "type" -> doc.from_string("attr.type_(" <> print_string(attribute.1) <> ")")
+
+    // Data attribute takes 2 elements, we need a special case for it
+    // "data" -> todo
+
+    // Escape hatch for unknown attributes i.e. htmx or similar
     _ -> {
       let children = [
         doc.from_string(print_string(attribute.0)),
         doc.from_string(print_string(attribute.1)),
       ]
-      doc.from_string("attribute")
+      doc.from_string("attr.Attr")
       |> doc.append(wrap(children, "(", ")"))
     }
   }
