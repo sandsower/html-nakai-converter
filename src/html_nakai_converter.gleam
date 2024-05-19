@@ -1,9 +1,10 @@
 import glam/doc.{type Document}
+import gleam/io
 import gleam/list
+import gleam/result
 import gleam/string
-import javascript_dom_parser.{type HtmlNode, Comment, Element, Text} as parser
 
-/// Convert a string of HTML in to the same document but using the Lustre HTML
+/// Convert a string of HTML in to the same document but using the Nakai HTML
 /// syntax.
 ///
 /// The resulting code is expected to be in a module with these imports:
@@ -13,19 +14,88 @@ import javascript_dom_parser.{type HtmlNode, Comment, Element, Text} as parser
 /// import nakai/attr.{Attr}
 /// ```
 ///
-pub fn convert(html: String) -> String {
-  let documents =
-    html
-    |> parser.parse_to_records
-    |> strip_body_wrapper(html)
-    |> print_children(StripWhitespace)
+pub type HtmlNode {
+  Element(
+    tag: String,
+    attributes: List(#(String, String)),
+    children: List(HtmlNode),
+  )
+  Comment(String)
+  Text(String)
+}
 
-  case documents {
-    [] -> doc.empty
-    [document] -> document
-    _ -> wrap(documents, "[", "]")
+type DomElement {
+  DomElement(String, List(#(String, String)), List(DomElement))
+}
+
+pub type Dom =
+  List(#(String, List(#(String, String)), List(DomElement)))
+
+type FastHtmlError
+
+@external(erlang, "fast_html", "decode")
+fn parse_to_dom(html: String) -> Result(Dom, FastHtmlError)
+
+fn dom_element_to_element(dom: DomElement) -> HtmlNode {
+  io.debug(dom)
+  case dom {
+    DomElement(_, _, []) -> {
+      let DomElement(tag, attributes, _) = dom
+      Element(tag, attributes, [])
+    }
+    DomElement(_, _, _) -> {
+      let DomElement(tag, attributes, children) = dom
+      let children = list.map(children, dom_element_to_element)
+      Element(tag, attributes, children)
+    }
   }
-  |> doc.to_string(80)
+}
+
+fn dom_to_records(dom: Dom) -> Result(HtmlNode, String) {
+  io.debug(dom)
+  case dom |> list.first {
+    Ok(#("html", _, children)) -> {
+      Ok(Element("html", [], list.map(children, dom_element_to_element)))
+    }
+    Ok(#("head", _, children)) -> {
+      Ok(Element("head", [], list.map(children, dom_element_to_element)))
+    }
+    _ -> Error("No HTML tag found")
+  }
+}
+
+pub fn convert(html: String) -> String {
+  case
+    html
+    |> parse_to_dom
+  {
+    Ok(dom) -> {
+      case
+        dom
+        |> dom_to_records
+      {
+        Ok(documents) -> {
+          let children =
+            documents
+            |> strip_body_wrapper(html)
+            |> print_children(StripWhitespace)
+
+          case children {
+            [] -> doc.empty
+            [document] -> document
+            _ -> wrap(children, "[", "]")
+          }
+          |> doc.to_string(80)
+        }
+        Error(err) -> {
+          err
+        }
+      }
+    }
+    Error(_) -> {
+      "Failed to parse HTML"
+    }
+  }
 }
 
 type WhitespaceMode {
